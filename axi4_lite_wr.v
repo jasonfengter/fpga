@@ -44,7 +44,22 @@ always@(posedge clk or negedge arst_n) begin
 		current_state <= SM_IDLE;
 	else begin
 		case (current_state)
-		
+			SM_IDLE:
+				if (wr_valid == 1'b1)
+					current_state <= SM_WR_ADDR;
+			SM_WR_ADDR:
+				if (s_axi_awready == 1'b1)
+					current_state <= SM_WR_DATA;
+			SM_WR_DATA:
+				if (s_axi_wready == 1'b1)
+					current_state <= SM_WAIT_ACK;
+			SM_WAIT_ACK:
+				if (s_axi_bvalid == 1'b1)
+					current_state <= SM_WR_DONE;
+			SM_WR_DONE:
+				current_state <= SM_IDLE;
+			default:
+				current_state <= SM_IDLE;
 		endcase
 	end
 	
@@ -60,5 +75,28 @@ wire current_state_is_SM_WR_DONE  	= (current_state == SM_WR_DONE );
 
 // State machine output
 
+// wr_ready
+assign wr_ready = (current_state_is_SM_WR_DONE);
+
+// s_axi_awaddr (32bit)
+assign s_axi_awaddr = (current_state_is_SM_WR_ADDR)? wr_addr : 32'h0;
+
+// s_axi_awvalid
+assign s_axi_awvalid = current_state_is_SM_WR_ADDR;
+
+// s_axi_wdata (32bit)
+assign s_axi_wdata = (current_state_is_SM_WR_DATA)? wr_data : 32'h0;
+
+// s_axi_wstrb
+// ?
+
+// s_axi_wvalid
+assign s_axi_wvalid = current_state_is_SM_WR_DATA;
+
+//s_axi_bresp
+// ?
+
+//s_axi_bready
+assign s_axi_bready = current_state_is_SM_WR_DATA | current_state_is_SM_WAIT_ACK;
 
 endmodule
