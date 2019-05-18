@@ -38,7 +38,19 @@ always@(posedge clk or negedge arst_n) begin
 		current_state <= SM_IDLE;
 	else begin
 		case (current_state)
-		
+			SM_IDLE:
+				if (rd_valid == 1'b1)
+					current_state <= SM_RD_ADDR;
+			SM_RD_ADDR:
+				if (s_axi_arready == 1'b1)
+					current_state <= SM_WT_DATA;
+			SM_WT_DATA:
+				if (s_axi_rvalid == 1'b1)
+					current_state <= SM_ACK_DATA;
+			SM_ACK_DATA:
+				current_state <= SM_IDLE;
+			default:
+				current_state <= SM_IDLE;
 		endcase
 	end
 	
@@ -54,5 +66,10 @@ wire current_state_is_SM_ACK_DATA 	= (current_state == SM_ACK_DATA	);
 
 // State machine output
 
+assign rd_data = (current_state_is_SM_ACK_DATA)? s_axi_rdata : 32'h0;
+assign rd_ready = (current_state_is_SM_ACK_DATA);
+assign s_axi_araddr = (current_state_is_SM_RD_ADDR)? rd_addr : 32'h0;
+assign s_axi_arvalid = current_state_is_SM_RD_ADDR;
+assign s_axi_rready = (current_state_is_SM_ACK_DATA);
 
 endmodule
