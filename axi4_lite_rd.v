@@ -65,8 +65,15 @@ wire current_state_is_SM_ACK_DATA 	= (current_state == SM_ACK_DATA	);
 
 
 // State machine output
-
-assign rd_data = (current_state_is_SM_ACK_DATA)? s_axi_rdata : 32'h0;
+reg [31:0] rd_data_r;
+always@(posedge clk or negedge arst_n) begin
+	if (arst_n == 1'b0) 
+		rd_data_r <= 32'h0;
+	else
+		if (s_axi_rvalid == 1'b1)
+			rd_data_r <= s_axi_rdata;
+end
+assign rd_data = (current_state_is_SM_ACK_DATA)? rd_data_r : 32'h0;
 assign rd_ready = (current_state_is_SM_ACK_DATA);
 assign s_axi_araddr = (current_state_is_SM_RD_ADDR)? rd_addr : 32'h0;
 assign s_axi_arvalid = current_state_is_SM_RD_ADDR;

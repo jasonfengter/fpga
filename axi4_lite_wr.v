@@ -88,7 +88,7 @@ assign s_axi_awvalid = current_state_is_SM_WR_ADDR;
 assign s_axi_wdata = (current_state_is_SM_WR_DATA)? wr_data : 32'h0;
 
 // s_axi_wstrb
-// ?
+assign s_axi_wstrb = 4'b1111;
 
 // s_axi_wvalid
 assign s_axi_wvalid = current_state_is_SM_WR_DATA;
