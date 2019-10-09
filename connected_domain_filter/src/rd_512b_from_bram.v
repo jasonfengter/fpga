@@ -8,22 +8,23 @@ module rd_512b_from_bram(
 	o_done,
 	i_rd_row_num, // 0-511, 9bit
 	o_rd_data_512b, //512bit
+	// Below to TOP BRAM rd controller
 	o_rd_from_bram_addr, //13bit
 	i_rd_from_bram_data, //32bit
 	o_rd_from_bram_trig,
 	i_rd_from_bram_done
     );
 	
-	input i_clk;
-	input i_rstn;
-	input i_trig;
-	output reg o_done;
-	input [8:0] i_rd_row_num; // 0-511; 9bit
-	output reg [511:0] o_rd_data_512b; //512bit
-	output reg [12:0] o_rd_from_bram_addr; //13bit
-	input [31:0] i_rd_from_bram_data; //32bit
-	output reg o_rd_from_bram_trig;
-	input i_rd_from_bram_done;
+	input 				i_clk;
+	input 				i_rstn;
+	input 				i_trig;
+	output reg 			o_done;
+	input [8:0] 		i_rd_row_num; // 0-511; 9bit
+	output reg [511:0] 	o_rd_data_512b; //512bit
+	output reg [12:0] 	o_rd_from_bram_addr; //13bit
+	input [31:0] 		i_rd_from_bram_data; //32bit
+	output reg 			o_rd_from_bram_trig;
+	input 				i_rd_from_bram_done;
 	
 	reg [7:0] sm_state;
 	localparam	IDLE=0,
@@ -55,7 +56,7 @@ module rd_512b_from_bram(
 			end
 		else
 			case (sm_state)
-				IDLE:
+				IDLE: // in IDLE, done signal to be reset but o_data should not be touched!!
 					begin
 						if (i_trig==1'b1)
 							sm_state <= DWORD1;
