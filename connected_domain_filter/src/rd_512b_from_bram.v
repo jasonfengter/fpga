@@ -1,5 +1,5 @@
 
-
+`define debug_mode
 
 module rd_512b_from_bram(
 	i_clk,
@@ -21,7 +21,7 @@ module rd_512b_from_bram(
 	input 				i_clk;
 	input 				i_rstn;
 	input 				i_trig;
-	output reg 			o_done;
+	output  			o_done;
 	input [8:0] 		i_rd_row_num; // 0-511; 9bit
 	output reg [511:0] 	o_rd_data_512b; //512bit
 	output reg [12:0] 	o_rd_from_bram_addr; //13bit
@@ -30,9 +30,11 @@ module rd_512b_from_bram(
 	input 				i_rd_from_bram_done;
 	
 	`ifdef debug_mode
-	output [31:0] debug_port;
+	output [127:0] debug_port;
 	`endif
 	
+	reg o_done_pre;
+	assign o_done = o_done_pre & i_trig;
 	
 	reg [7:0] sm_state;
 	localparam	IDLE=0,
@@ -60,7 +62,7 @@ module rd_512b_from_bram(
 				o_rd_from_bram_addr <= 9'd0;
 				o_rd_from_bram_trig <= 1'b0;
 				sm_state <= IDLE;
-				o_done <= 1'b0;
+				o_done_pre <= 1'b0;
 			end
 		else
 			case (sm_state)
@@ -68,7 +70,7 @@ module rd_512b_from_bram(
 					// (1) in IDLE, done signal to be reset but o_data should not be touched!!
 					// (2) in IDLE, IP under control should pull-down trig signal
 					begin
-						o_done <= 1'b0;
+						o_done_pre <= 1'b0;
 						o_rd_from_bram_trig <= 1'b0;
 						
 						if (i_trig==1'b1)
@@ -289,11 +291,11 @@ module rd_512b_from_bram(
 					begin
 						
 						o_rd_from_bram_trig <= 1'b0;
-						o_done <= 1'b1;
+						o_done_pre <= 1'b1;
 						if (i_trig == 1'b0) begin
 							// after 'trig' deactivated, DONE signal should be de-asserted
 							sm_state <= IDLE;
-							o_done <= 1'b0;
+							o_done_pre <= 1'b0;
 						end
 					end
 				
@@ -303,6 +305,7 @@ module rd_512b_from_bram(
 	
 	`ifdef debug_mode
 	assign debug_port[7:0] = sm_state;
+	assign debug_port[39:8] = i_rd_from_bram_data;
 	`endif
 	
 endmodule
