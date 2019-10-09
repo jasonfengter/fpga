@@ -13,6 +13,9 @@ module rd_512b_from_bram(
 	i_rd_from_bram_data, //32bit
 	o_rd_from_bram_trig,
 	i_rd_from_bram_done
+	`ifdef debug_mode
+	,debug_port
+	`endif
     );
 	
 	input 				i_clk;
@@ -25,6 +28,11 @@ module rd_512b_from_bram(
 	input [31:0] 		i_rd_from_bram_data; //32bit
 	output reg 			o_rd_from_bram_trig;
 	input 				i_rd_from_bram_done;
+	
+	`ifdef debug_mode
+	output [31:0] debug_port;
+	`endif
+	
 	
 	reg [7:0] sm_state;
 	localparam	IDLE=0,
@@ -293,6 +301,8 @@ module rd_512b_from_bram(
 	
 	end
 	
-	
+	`ifdef debug_mode
+	assign debug_port[7:0] = sm_state;
+	`endif
 	
 endmodule
