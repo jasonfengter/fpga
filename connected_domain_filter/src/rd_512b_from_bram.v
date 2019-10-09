@@ -56,14 +56,18 @@ module rd_512b_from_bram(
 			end
 		else
 			case (sm_state)
-				IDLE: // in IDLE, done signal to be reset but o_data should not be touched!!
+				IDLE: 
+					// (1) in IDLE, done signal to be reset but o_data should not be touched!!
+					// (2) in IDLE, IP under control should pull-down trig signal
 					begin
+						o_done <= 1'b0;
+						o_rd_from_bram_trig <= 1'b0;
+						
 						if (i_trig==1'b1)
 							sm_state <= DWORD1;
 						else
 							sm_state <= IDLE;
-						o_done <= 1'b0;
-						o_rd_from_bram_trig <= 1'b0;
+						
 					end
 				DWORD1:
 					begin
@@ -72,6 +76,7 @@ module rd_512b_from_bram(
 						
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[511:480] <= i_rd_from_bram_data;
 								sm_state <= DWORD2;
@@ -84,6 +89,7 @@ module rd_512b_from_bram(
 						
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[479:448] <= i_rd_from_bram_data;
 								sm_state <= DWORD3;
@@ -96,6 +102,7 @@ module rd_512b_from_bram(
 					
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[447:416] <= i_rd_from_bram_data;
 								sm_state <= DWORD4;
@@ -108,6 +115,7 @@ module rd_512b_from_bram(
 					
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[415:384] <= i_rd_from_bram_data;
 								sm_state <= DWORD5;
@@ -120,6 +128,7 @@ module rd_512b_from_bram(
 					
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[383:352] <= i_rd_from_bram_data;
 								sm_state <= DWORD6;
@@ -132,6 +141,7 @@ module rd_512b_from_bram(
 				
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[351:320] <= i_rd_from_bram_data;
 								sm_state <= DWORD7;
@@ -144,6 +154,7 @@ module rd_512b_from_bram(
 			
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[319:288] <= i_rd_from_bram_data;
 								sm_state <= DWORD8;
@@ -156,6 +167,7 @@ module rd_512b_from_bram(
 				
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[287:256] <= i_rd_from_bram_data;
 								sm_state <= DWORD9;
@@ -168,6 +180,7 @@ module rd_512b_from_bram(
 			
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[255:224] <= i_rd_from_bram_data;
 								sm_state <= DWORD10;
@@ -180,6 +193,7 @@ module rd_512b_from_bram(
 				
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[223:192] <= i_rd_from_bram_data;
 								sm_state <= DWORD11;
@@ -192,6 +206,7 @@ module rd_512b_from_bram(
 	
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[191:160] <= i_rd_from_bram_data;
 								sm_state <= DWORD12;
@@ -204,6 +219,7 @@ module rd_512b_from_bram(
 				
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[159:128] <= i_rd_from_bram_data;
 								sm_state <= DWORD13;
@@ -216,6 +232,7 @@ module rd_512b_from_bram(
 					
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[127:96] <= i_rd_from_bram_data;
 								sm_state <= DWORD14;
@@ -228,6 +245,7 @@ module rd_512b_from_bram(
 		
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[95:64] <= i_rd_from_bram_data;
 								sm_state <= DWORD15;
@@ -240,6 +258,7 @@ module rd_512b_from_bram(
 					
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[63:32] <= i_rd_from_bram_data;
 								sm_state <= DWORD16;
@@ -252,6 +271,7 @@ module rd_512b_from_bram(
 					
 						if (i_rd_from_bram_done == 1'b1)
 							begin
+								//after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[31:0] <= i_rd_from_bram_data;
 								sm_state <= DONE;
@@ -259,9 +279,11 @@ module rd_512b_from_bram(
 					end
 				DONE:
 					begin
+						
 						o_rd_from_bram_trig <= 1'b0;
 						o_done <= 1'b1;
 						if (i_trig == 1'b0) begin
+							// after 'trig' deactivated, DONE signal should be de-asserted
 							sm_state <= IDLE;
 							o_done <= 1'b0;
 						end
