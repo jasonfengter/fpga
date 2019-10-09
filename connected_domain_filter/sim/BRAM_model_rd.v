@@ -38,7 +38,7 @@ module BRAM_model_rd(
 						if(latency_cnter==READ_LATENCY)
 							begin
 								o_bram_done_pre<=1'b1;
-								o_bram_data<=i_bram_addr; //return_bram_data(i_bram_addr);
+								o_bram_data<=return_bram_data(i_bram_addr);
 							end
 						else
 							begin
@@ -56,12 +56,13 @@ module BRAM_model_rd(
 	
 	end
 	
-	function return_bram_data;
+	function automatic [31:0] return_bram_data;
 		input [12:0] addr;
 		begin
 				case(addr)
-					12'h0: return_bram_data=32'h1234_5678;
-					12'h1: return_bram_data=32'h8765_4321;
+					13'd0: return_bram_data=32'h1234_5678;
+					13'd1: return_bram_data=32'h8765_4321;
+					13'd14: return_bram_data=32'h1010_1010;
 					default: return_bram_data=32'hffff_ffff;
 				endcase
 		end

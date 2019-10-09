@@ -21,7 +21,7 @@ module tb_rd_512b_from_bram(
 	// Debug port
 	`define debug_mode
 	wire [7:0] uut_sm_state;
-	
+	wire [31:0] uut_32b_data_from_bram;
 	
 	rd_512b_from_bram uut(
 		.i_clk(i_clk),
@@ -35,7 +35,7 @@ module tb_rd_512b_from_bram(
 		.i_rd_from_bram_data(i_rd_from_bram_data), //32bit
 		.o_rd_from_bram_trig(o_rd_from_bram_trig),
 		.i_rd_from_bram_done(i_rd_from_bram_done),
-		.debug_port({24'd0,uut_sm_state})
+		.debug_port({uut_32b_data_from_bram,uut_sm_state})
     );
 	
 	BRAM_model_rd BRAM(
@@ -76,5 +76,8 @@ module tb_rd_512b_from_bram(
 		if(o_done==1'b1)
 			i_trig<=0;
 	end
+	
+
+
 	
 endmodule
