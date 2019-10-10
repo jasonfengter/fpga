@@ -33,6 +33,7 @@ module rd_512b_from_bram(
 	output [127:0] debug_port;
 	`endif
 	
+	// o_done must be pull-down when i_trig is down!!!
 	reg o_done_pre;
 	assign o_done = o_done_pre & i_trig;
 	
