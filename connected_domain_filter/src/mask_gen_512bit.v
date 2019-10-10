@@ -14,8 +14,12 @@ module mask_gen_512bit (
 	input i_trig;
 	input i_left_or_right; // 0=left, 1=right
 	input [8:0] i_bound_index;
-	output reg o_done;
+	output  o_done;
 	output [511:0] o_mask;
+	
+	
+	
+	
 	
 
 	reg [8:0] i_bound_index_latch;
@@ -45,6 +49,8 @@ module mask_gen_512bit (
                 RIGHT9=18,
 
 				DONE	=19;
+	// GUIDELINE: o_done must be pull-down when i_trig is down!!!
+	assign o_done = (sm_state == DONE) & i_trig;
 				
 	// State machine transition
 	always@(posedge i_clk or negedge i_rstn) begin
@@ -54,6 +60,9 @@ module mask_gen_512bit (
 			begin
 				case (sm_state)
 					IDLE:
+						// GUIDELINE
+						// (1) in IDLE, done signal to be reset but o_data should not be touched!!
+						// (2) in IDLE, IP under control should pull-down trig signal
 						begin
 							if (i_trig == 1'b1)
 								sm_state <= (i_left_or_right == 1'b0)? LEFT1 : RIGHT1;
@@ -110,7 +119,7 @@ module mask_gen_512bit (
 
 	
 	assign o_mask = (sm_state == DONE)? o_mask_pre : 512'h0;
-	assign o_done = (sm_state == DONE);
+	
 	
 	
 	always@(posedge i_clk or negedge i_rstn) begin
@@ -123,6 +132,9 @@ module mask_gen_512bit (
 			begin
 				case (sm_state)
 					IDLE:
+						// GUIDELINE
+						// (1) in IDLE, done signal to be reset but o_data should not be touched!!
+						// (2) in IDLE, IP under control should pull-down trig signal
 						if (i_trig == 1'b1) begin
 							i_bound_index_latch <= i_bound_index;
 							o_mask_pre <= {512{1'b0}};
@@ -130,109 +142,109 @@ module mask_gen_512bit (
 					LEFT1:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{256{1'b1}},o_mask_pre[511:256]};
 						end
 					LEFT2:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{128{1'b1}},o_mask_pre[511:128]};
 						end
 					LEFT3:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{64{1'b1}},o_mask_pre[511:64]};
 						end
 					LEFT4:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{32{1'b1}},o_mask_pre[511:32]};
 						end
 					LEFT5:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{16{1'b1}},o_mask_pre[511:16]};
 						end
 					LEFT6:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{8{1'b1}},o_mask_pre[511:8]};
 						end
 					LEFT7:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{4{1'b1}},o_mask_pre[511:4]};
 						end
 					LEFT8:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {{2{1'b1}},o_mask_pre[511:2]};
 						end
 					LEFT9:
 						begin
 							//i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {1'b1,o_mask_pre[511:1]};
 						end
 					RIGHT1:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[255:0],{256{1'b1}}};
 						end
 					RIGHT2:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[383:0],{128{1'b1}}};
 						end
 					RIGHT3:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[447:0],{64{1'b1}}};
 						end
 					RIGHT4:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[479:0],{32{1'b1}}};
 						end
 					RIGHT5:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[495:0],{16{1'b1}}};
 						end	
 					RIGHT6:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[503:0],{8{1'b1}}};
 						end
 					RIGHT7:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[507:0],{4{1'b1}}};
 						end
 					RIGHT8:
 						begin
 							i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[509:0],{2{1'b1}}};
 						end
 					RIGHT9:
 						begin
 							//i_bound_index_latch <= i_bound_index_latch << 1;
-							if (i_bound_index[8]==1'b1)
+							if (i_bound_index_latch[8]==1'b1)
 								o_mask_pre <= {o_mask_pre[510:0],1'b1};
 						end	
 					DONE:  // DONE included
