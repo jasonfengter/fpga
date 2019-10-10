@@ -59,12 +59,14 @@ module BRAM_model_rd(
 	function automatic [31:0] return_bram_data;
 		input [12:0] addr;
 		begin
-				case(addr)
-					13'd0: return_bram_data=32'h1234_5678;
-					13'd1: return_bram_data=32'h8765_4321;
-					13'd14: return_bram_data=32'h1010_1010;
-					default: return_bram_data=32'hffff_ffff;
-				endcase
+				return_bram_data = {19'h0 , addr};
+				
+				// case(addr)
+					// 13'd0: return_bram_data=32'h1234_5678;
+					// 13'd1: return_bram_data=32'h8765_4321;
+					// 13'd14: return_bram_data=32'h1010_1010;
+					// default: return_bram_data=32'hffff_ffff;
+				// endcase
 		end
 	endfunction
 
