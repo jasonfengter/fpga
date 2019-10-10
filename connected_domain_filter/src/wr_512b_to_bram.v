@@ -7,25 +7,28 @@ module wr_512b_to_bram(
 	o_done,
 	i_wr_row_num, // 0-511, 9bit
 	i_wr_data_512b, //512bit
+	//Below signal are connected to TOP BRAM wr controller
 	o_wr_to_bram_addr, //13bit
 	o_wr_to_bram_data, //32bit
 	o_wr_to_bram_trig,
 	i_wr_to_bram_done
 );
 
-	input i_clk;
-	input i_rstn;
-	input i_trig;
-	output reg o_done;
-	input [8:0] i_wr_row_num; // 0-511; 9bit
-	input [511:0] i_wr_data_512b; //512bit
-	output reg [12:0] o_wr_to_bram_addr; //13bit
-	output reg [31:0] o_wr_to_bram_data; //32bit
-	output reg o_wr_to_bram_trig;
-	input i_wr_to_bram_done;
+	input 				i_clk;
+	input 				i_rstn;
+	input 				i_trig;
+	output  			o_done;
+	input [8:0] 		i_wr_row_num; // 0-511; 9bit
+	input [511:0] 		i_wr_data_512b; //512bit
+	output reg [12:0] 	o_wr_to_bram_addr; //13bit
+	output reg [31:0] 	o_wr_to_bram_data; //32bit
+	output reg 			o_wr_to_bram_trig;
+	input 				i_wr_to_bram_done;
 	
 	
-
+	// o_done must be pull-down when i_trig is down!!!
+	reg o_done_pre;
+	assign o_done = o_done_pre & i_trig;
 
 	
 	reg [7:0] sm_state;
@@ -56,17 +59,19 @@ module wr_512b_to_bram(
 				o_wr_to_bram_data <= 32'd0;
 				o_wr_to_bram_trig <= 1'b0;
 				sm_state <= IDLE;
-				o_done <= 1'b0;
+				o_done_pre <= 1'b0;
 			end
 		else
 			case (sm_state)
 				IDLE:
+					// (1) in IDLE, done signal to be reset but o_data should not be touched!!
+					// (2) in IDLE, IP under control should pull-down trig signal
 					begin
 						if (i_trig==1'b1)
 							sm_state <= DWORD1;
 						else
 							sm_state <= IDLE;
-						o_done <= 1'b0;
+						o_done_pre <= 1'b0;
 						o_wr_to_bram_trig <= 1'b0;
 					end
 				DWORD1:
@@ -75,6 +80,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'b0000};
 						o_wr_to_bram_data <= i_wr_data_512b[511:480];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD2;
@@ -86,6 +92,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd1};
 						o_wr_to_bram_data <= i_wr_data_512b[479:448];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD3;
@@ -97,6 +104,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd2};
 						o_wr_to_bram_data <= i_wr_data_512b[447:416];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD4;
@@ -108,6 +116,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd3};
 						o_wr_to_bram_data <= i_wr_data_512b[415:384];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD5;
@@ -119,6 +128,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd4};
 						o_wr_to_bram_data <= i_wr_data_512b[383:352];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD6;
@@ -130,6 +140,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd5};
 						o_wr_to_bram_data <= i_wr_data_512b[351:320];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD7;
@@ -141,6 +152,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd6};
 						o_wr_to_bram_data <= i_wr_data_512b[319:288];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD8;
@@ -152,6 +164,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd7};
 						o_wr_to_bram_data <= i_wr_data_512b[287:256];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD9;
@@ -163,6 +176,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd8};
 						o_wr_to_bram_data <= i_wr_data_512b[255:224];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD10;
@@ -174,6 +188,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd9};
 						o_wr_to_bram_data <= i_wr_data_512b[223:192];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD11;
@@ -185,6 +200,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd10};
 						o_wr_to_bram_data <= i_wr_data_512b[191:160];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD12;
@@ -196,6 +212,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd11};
 						o_wr_to_bram_data <= i_wr_data_512b[159:128];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD13;
@@ -207,6 +224,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd12};
 						o_wr_to_bram_data <= i_wr_data_512b[127:96];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD14;
@@ -218,6 +236,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd13};
 						o_wr_to_bram_data <= i_wr_data_512b[95:64];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD15;
@@ -229,6 +248,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd14};
 						o_wr_to_bram_data <= i_wr_data_512b[63:32];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DWORD16;
@@ -240,6 +260,7 @@ module wr_512b_to_bram(
 						o_wr_to_bram_addr <= {i_wr_row_num, 4'd15};
 						o_wr_to_bram_data <= i_wr_data_512b[31:0];
 						if (i_wr_to_bram_done == 1'b1)
+							//after DONE asserted, should deactivate 'trig' of IP under control
 							begin
 								o_wr_to_bram_trig <= 1'b0;
 								sm_state <= DONE;
@@ -248,10 +269,11 @@ module wr_512b_to_bram(
 				DONE:
 					begin
 						o_wr_to_bram_trig <= 1'b0;
-						o_done <= 1'b1;
+						o_done_pre <= 1'b1;
 						if (i_trig == 1'b0) begin
+							// after 'trig' deactivated, DONE signal should be de-asserted
 							sm_state <= IDLE;
-							o_done <= 1'b0;
+							o_done_pre <= 1'b0;
 						end
 					end
 				
