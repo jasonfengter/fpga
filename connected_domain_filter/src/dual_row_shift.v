@@ -5,14 +5,15 @@ module dual_row_shift(
 	i_clk,
 	i_rstn,
 	i_trig_rd,
-	i_trig_shift,
+
 	o_done,
 	i_row_num_to_read,	//9bit
-	i_row_num_init,		//9bit
-	i_init_en,			//when enabled, load 1st row reg with i_row_num_init, 2nd row with i_row_num_to_read, 
+	i_row_num_to_initial_setup,		//9bit
+	i_init_en,			//when enabled, load 1st row reg with i_row_num_to_initial_setup, 2nd row with i_row_num_to_read, 
 						//otherwise, load 2nd row with i_row_num_to_read
 	o_1st_row_512b,		//512bit
 	o_2nd_row_512b,		//512bit
+	
 	// to TOP BRAM rd controller ctrl bus
 	u_rd_512b_from_bram_o_rd_from_bram_addr,
 	u_rd_512b_from_bram_i_rd_from_bram_data,
@@ -25,11 +26,11 @@ module dual_row_shift(
 	input 				i_clk;
 	input 				i_rstn;
 	input 				i_trig_rd;
-	input 				i_trig_shift;
-	output reg 			o_done;
+
+	output  			o_done;
 	input [8:0] 		i_row_num_to_read;	//9bit
-	input [8:0] 		i_row_num_init;		//9bit
-	input 				i_init_en;			//when enabled; load 1st row reg with i_row_num_init; 2nd row with i_row_num_to_read; 
+	input [8:0] 		i_row_num_to_initial_setup;		//9bit
+	input 				i_init_en;			//when enabled; load 1st row reg with i_row_num_to_initial_setup; 2nd row with i_row_num_to_read; 
 											//otherwise; load 2nd row with i_row_num_to_read
 	output reg [511:0] 	o_1st_row_512b;		//512bit
 	output reg [511:0] 	o_2nd_row_512b;		//512bit
@@ -40,7 +41,7 @@ module dual_row_shift(
 	input 				u_rd_512b_from_bram_i_rd_from_bram_done;
 	
 	
-	
+	// Control interface to rd_512b IP below
 	reg 				u_rd_512b_from_bram_i_trig;			
 	wire 				u_rd_512b_from_bram_o_done;				
 	reg [8:0]			u_rd_512b_from_bram_i_rd_row_num		;
@@ -63,7 +64,7 @@ module dual_row_shift(
     );
 	
 
-	reg i_trig_rd_int;
+	reg i_trig_rd_int;  //Trigger signal to start SM for rd_512b_bram IP
 
 
 	
@@ -76,14 +77,11 @@ module dual_row_shift(
 	// DualRow Shifter State machine
 	// Will not support dual-row shift operation. Only row data retrieve function left.
 	// Module interface
-	/*i_trig_shift,
-	o_done,
-	i_row_num_to_read,	//9bit
-	i_row_num_init,		//9bit
-	i_init_en,			//when enabled, load 1st row reg with i_row_num_init, 2nd row with i_row_num_to_read, 
-						//otherwise, load 2nd row with i_row_num_to_read
-	o_1st_row_512b,		//512bit
-	o_2nd_row_512b,		//512bit*/
+
+	
+	// GUIDELINE: o_done must be pull-down when i_trig is down!!!
+	reg o_done_pre;
+	assign o_done = o_done_pre & i_trig_rd;
 	
 	// in IDLE, done signal to be reset but o_data should not be touched!!
 	always@(posedge i_clk or negedge i_rstn) begin
@@ -91,7 +89,7 @@ module dual_row_shift(
 			begin
 				o_1st_row_512b <= 512'd0;
 				o_2nd_row_512b <= 512'd0;
-				o_done <= 1'b0;
+				o_done_pre <= 1'b0;
 								
 				sm_state <= IDLE;
 				i_trig_rd_int <= 1'b0;
@@ -101,9 +99,12 @@ module dual_row_shift(
 			begin
 				case (sm_state)
 					IDLE:
+						// GUIDELINE
+						// (1) in IDLE, done signal to be reset but o_data should not be touched!!
+						// (2) in IDLE, IP under control should pull-down trig signal
 						begin
-							i_trig_rd_int <= 1'b0;
-							o_done <=1'b0; 
+							i_trig_rd_int <= 1'b0;	//Disable IP trigger
+							o_done_pre <=1'b0; 
 							case ( {i_trig_rd,i_init_en}  )
 								2'b11:
 									sm_state <= RD_INIT1;
@@ -115,11 +116,12 @@ module dual_row_shift(
 							
 						end
 					RD_INIT1:
+						//GUIDELINE: after DONE asserted, should deactivate 'trig' of IP under control
 						begin
 							//reset module done
-							o_done <=1'b0; 
+							o_done_pre <=1'b0; 
 							//setup rd_512b_bram module
-							u_rd_512b_from_bram_i_rd_row_num <= i_row_num_init;
+							u_rd_512b_from_bram_i_rd_row_num <= i_row_num_to_initial_setup;
 							//trigger rd_512b_bram_module
 							i_trig_rd_int <= 1'b1;
 							
@@ -132,10 +134,15 @@ module dual_row_shift(
 								end
 						end
 					RD_INIT2:
+						//GUIDELINE: after DONE asserted, should deactivate 'trig' of IP under control
 						begin
+							//reset module done
+							o_done_pre <=1'b0; 
+							//setup rd_512b_bram module
 							u_rd_512b_from_bram_i_rd_row_num <= i_row_num_to_read;
+							//trigger rd_512b_bram_module
 							i_trig_rd_int <= 1'b1;
-							o_done <=1'b0; 
+							
 							if (u_rd_512b_from_bram_o_done == 1'b1)
 								begin
 									i_trig_rd_int <= 1'b0;
@@ -144,10 +151,11 @@ module dual_row_shift(
 								end
 						end
 					RD:
+						//GUIDELINE: after DONE asserted, should deactivate 'trig' of IP 
 						begin
-							u_rd_512b_from_bram_i_rd_row_num <= i_row_num_to_read;
-							i_trig_rd_int <= 1'b1;
-							o_done <=1'b0; 
+							o_done_pre <=1'b0;   //reset module done
+							u_rd_512b_from_bram_i_rd_row_num <= i_row_num_to_read;  //setup rd_512b_bram module
+							i_trig_rd_int <= 1'b1;  //trigger rd_512b_bram_module
 							if (u_rd_512b_from_bram_o_done == 1'b1)
 								begin
 									i_trig_rd_int <= 1'b0;
@@ -159,9 +167,9 @@ module dual_row_shift(
 					
 					DONE:
 						begin
-							o_done <= 1'b1;
-							if (i_trig_rd | i_trig_shift == 1'b0)
-								sm_state <= IDLE;
+							o_done_pre <= 1'b1;
+							if (i_trig_rd  == 1'b0) // GUIDELINE: after 'trig' deactivated, DONE signal should be de-asserted
+								begin o_done_pre<=1'b0; sm_state <= IDLE; end
 						end
 				endcase
 			end
@@ -181,6 +189,9 @@ module dual_row_shift(
 			end
 		else
 			begin
+						// GUIDELINE
+						// (1) in IDLE, done signal to be reset but o_data should not be touched!!
+						// (2) in IDLE, IP  should pull-down trig signal
 				case (rd_bram_sm_state)
 					CONFIG:
 						begin
@@ -193,7 +204,7 @@ module dual_row_shift(
 						end
 					RD_DONE:
 						begin
-							if (u_rd_512b_from_bram_o_done==1'b1) begin
+							if (u_rd_512b_from_bram_o_done==1'b1) begin //GUIDELINE: after DONE asserted, should deactivate 'trig' of IP 
 								u_rd_512b_from_bram_i_trig <= 1'b0;
 								rd_bram_sm_state <= CONFIG;
 							end
@@ -206,10 +217,6 @@ module dual_row_shift(
 		
 	end
 	
-	task reset_rd_512b_ctrl;
-		begin
-			
-		end
-	endtask
+
 	
 endmodule
