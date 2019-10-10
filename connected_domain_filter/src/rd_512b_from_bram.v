@@ -33,7 +33,7 @@ module rd_512b_from_bram(
 	output [127:0] debug_port;
 	`endif
 	
-	// o_done must be pull-down when i_trig is down!!!
+	// GUIDELINE: o_done must be pull-down when i_trig is down!!!
 	reg o_done_pre;
 	assign o_done = o_done_pre & i_trig;
 	
@@ -68,6 +68,7 @@ module rd_512b_from_bram(
 		else
 			case (sm_state)
 				IDLE: 
+					// GUIDELINE
 					// (1) in IDLE, done signal to be reset but o_data should not be touched!!
 					// (2) in IDLE, IP under control should pull-down trig signal
 					begin
@@ -87,7 +88,7 @@ module rd_512b_from_bram(
 						
 						if (i_rd_from_bram_done == 1'b1)
 							begin
-								//after DONE asserted, should deactivate 'trig' of IP under control
+								//GUIDELINE: after DONE asserted, should deactivate 'trig' of IP under control
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[511:480] <= i_rd_from_bram_data;
 								sm_state <= DWORD2;
@@ -294,7 +295,7 @@ module rd_512b_from_bram(
 						o_rd_from_bram_trig <= 1'b0;
 						o_done_pre <= 1'b1;
 						if (i_trig == 1'b0) begin
-							// after 'trig' deactivated, DONE signal should be de-asserted
+							//GUIDELINE: after 'trig' deactivated, DONE signal should be de-asserted
 							sm_state <= IDLE;
 							o_done_pre <= 1'b0;
 						end
