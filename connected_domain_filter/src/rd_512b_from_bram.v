@@ -88,7 +88,7 @@ module rd_512b_from_bram(
 						
 						if (i_rd_from_bram_done == 1'b1)
 							begin
-								//GUIDELINE: after DONE asserted, should deactivate 'trig' of IP under control
+								//GUIDELINE: after IP o_done asserted, should deactivate IP i_trig
 								o_rd_from_bram_trig <= 1'b0;
 								o_rd_data_512b[511:480] <= i_rd_from_bram_data;
 								sm_state <= DWORD2;

@@ -118,8 +118,8 @@ module mask_gen_512bit (
 	// State machine output
 
 	
-	assign o_mask = (sm_state == DONE)? o_mask_pre : 512'h0;
-	
+	//assign o_mask = (sm_state == DONE)? o_mask_pre : 512'h0;
+	assign o_mask = o_mask_pre;  // keep data still until i_trig=1
 	
 	
 	always@(posedge i_clk or negedge i_rstn) begin
