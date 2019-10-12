@@ -1,7 +1,7 @@
 module rd_32b_from_bram (
 	i_clk,
 	i_rstn,
-	i_rd_trig,  // read transaction signal 
+	i_trig,  // read transaction signal 
 	i_rd_addr,
 	o_rd_data,
 	o_rd_ack,	// read transaction signal  END
@@ -13,18 +13,18 @@ module rd_32b_from_bram (
 	i_bram_data
 	
 );
-	input i_clk;
-	input i_rstn;
-	input i_rd_trig;  // read transaction signal 
-	input [12:0] i_rd_addr;
-	output reg [31:0] o_rd_data;
-	output reg o_rd_ack;	// read transaction signal  END
+	input 				i_clk;
+	input 				i_rstn;
+	input 				i_trig;  // read transaction signal 
+	input [12:0] 		i_rd_addr;
+	output reg [31:0] 	o_rd_data;
+	output reg 			o_rd_ack;	// read transaction signal  END
 	
-	output o_bram_access_type;	// to top bram read controller 0=512bit, 1=32bit
-	output reg [12:0] o_bram_rd_addr;		// bram direct read addr
-	output reg o_bram_rd_addr_ready;	// handshake ready signal
-	input i_bram_data_valid;	// handshake valid signal
-	input [31:0] i_bram_data;
+	output 				o_bram_access_type;	// to top bram read controller 0=512bit, 1=32bit
+	output reg [12:0] 	o_bram_rd_addr;		// bram direct read addr
+	output reg 			o_bram_rd_addr_ready;	// handshake ready signal
+	input 				i_bram_data_valid;	// handshake valid signal
+	input [31:0] 		i_bram_data;
 	
 	// State machine definition
 	reg [3:0] sm_state;
@@ -58,7 +58,7 @@ module rd_32b_from_bram (
 							o_rd_ack <= 1'b0;
 							o_rd_data <= 32'h0;
 							
-							if (i_rd_trig == 1'b1)
+							if (i_trig == 1'b1)
 								sm_state <= SEND_RD_CMD;
 							else
 								sm_state <= IDLE;
@@ -86,7 +86,7 @@ module rd_32b_from_bram (
 							o_rd_ack <= 1'b1;
 							o_rd_data <= i_bram_data;
 							
-							if (i_rd_trig == 1'b0)
+							if (i_trig == 1'b0)
 								sm_state <= IDLE;
 						end
 				
