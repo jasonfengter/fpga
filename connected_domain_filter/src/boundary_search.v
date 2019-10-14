@@ -187,6 +187,9 @@ module boundary_search(
 	reg o_done_pre;
 	assign o_done = o_done_pre & i_trig;
 	
+	wire [8:0] w_current_row_processed;
+	assign w_current_row_processed = i_row_num_to_read_int;
+	
 	always@(posedge i_clk or negedge i_rstn) begin
 		if (i_rstn==1'b0)
 			begin
@@ -241,9 +244,7 @@ module boundary_search(
 								i_init_en_int <= 1'b0;
 								i_trig_rd_int <= 1'b0;
 								
-								//latch 512b data
-								// row_1st_latch <= o_1st_row_512b_int;
-								// row_2nd_latch <= o_2nd_row_512b_int;
+
 							end
 						end
 					SEARCH_BOTTOM:
@@ -251,13 +252,13 @@ module boundary_search(
 							col_search_trig <= 1'b1;
 							if (col_search_done==1'b1) begin
 								col_search_trig <= 1'b0;
-								if (i_row_num_to_read_int==9'd511) 
+								if (w_current_row_processed == 9'd23)  // Here limits the max row# this module will reach
 									begin
 										line_sm_state <= DONE;
 									end
 								else
 									begin
-										// Setup dual-row-shift module
+										// Setup dual-row-shift module to load next row 512b data
 										i_init_en_int <= 1'b0;
 										i_trig_rd_int <= 1'b1;
 										i_row_num_init_int <= 9'd0;
@@ -274,14 +275,13 @@ module boundary_search(
 								// Setup dual-row-shift module
 								i_init_en_int 			<= 1'b0;
 								i_trig_rd_int 			<= 1'b0;
-								//latch 512b data
-								// row_1st_latch <= o_1st_row_512b_int;
-								// row_2nd_latch <= o_2nd_row_512b_int;
+
 							end
 						end
 					DONE:
 						begin //GUIDELINE: after 'trig' down, DONE signal should be also down
 							o_done_pre <= 1'b1;
+							// Reset dual-row-shift module
 							i_init_en_int 			<= 1'b0;
 							i_trig_rd_int 			<= 1'b0;
 							//i_trig_shift_int 		<= 1'b0;
@@ -315,6 +315,8 @@ module boundary_search(
 	reg col_search_done_pre;
 	assign col_search_done = col_search_done_pre & col_search_trig;
 	
+	wire [511:0] w_prev_512b_filter_data = u_mask_gen_512bit_wrapper_o_mask;
+	
 	always@(posedge i_clk or negedge i_rstn) begin
 		if (i_rstn==1'b0) begin
 				col_sm_state <= col_IDLE;
@@ -346,8 +348,11 @@ module boundary_search(
 							col_search_done_pre <= 1'b0;
 							
 							if (col_search_trig==1'b1) begin
-								// for the first time, latch 512b data from 512b_rd IP
-								row_1st_latch <= o_1st_row_512b_int;
+								// Latch 512b data from 512b_rd IP
+								// TODO:
+								// (1) Need to filter 'o_1st_row_512b_int' while latching it, with previous 512b mask 'w_prev_512b_filter_data'!
+								// (2) If 'o_1st_row_512b_int' is the START ROW, then additional logic is required.
+								row_1st_latch <= (w_current_row_processed == (row_num_to_start+1'b1)) ? o_1st_row_512b_int : (o_1st_row_512b_int | w_prev_512b_filter_data) & w_prev_512b_filter_data;
 								row_2nd_latch <= o_2nd_row_512b_int;
 								col_sm_state <= bound_detecting;
 							end
@@ -360,13 +365,13 @@ module boundary_search(
 								default: 
 									begin
 										col_sm_state <= bound_detecting;
-										// Left rotate shift 512b data
-										row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-										row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
-										col_cnter 	  <= (col_cnter + 1'b1) ;
+										
 									end
 							endcase
-								
+							// Left rotate shift 512b data
+							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
+							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					bound_start:
 						begin
@@ -383,13 +388,14 @@ module boundary_search(
 								default: 
 									begin 
 										col_sm_state <=bound_start;
-										// Left rotate shift 512b data
-										row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]} ;
-										row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]} ;
-										col_cnter 	  <= (col_cnter + 1'b1) ;
+								
 									
 									end
 							endcase
+							// Left rotate shift 512b data
+							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
+							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					bound_connect:
 						begin
@@ -405,12 +411,13 @@ module boundary_search(
 								default: 
 									begin
 										col_sm_state <=bound_connect;
-										// Left rotate shift 512b data
-										row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]} ;
-										row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]} ;
-										col_cnter 	  <= (col_cnter + 1'b1) ;
+									
 									end
 							endcase
+							// Left rotate shift 512b data
+							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
+							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					bound_pre_disconnect:
 						begin
@@ -436,12 +443,13 @@ module boundary_search(
 								default: 
 									begin 
 										col_sm_state <= bound_pre_disconnect;
-										// Left rotate shift 512b data
-										row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]} ;
-										row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]} ;
-										col_cnter 	  <= (col_cnter + 1'b1) ;
+										
 									end
 							endcase
+							// Left rotate shift 512b data
+							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
+							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					hard_connect:
 						begin
@@ -451,11 +459,12 @@ module boundary_search(
 							end
 							else begin
 								col_sm_state<=hard_connect;
-								// Left rotate shift 512b data
-								row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]} ;
-								row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]} ;
-								col_cnter 	  <= (col_cnter + 1'b1) ;
+								
 							end
+							// Left rotate shift 512b data
+							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
+							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					hard_pre_disconnect:
 						begin
@@ -467,7 +476,7 @@ module boundary_search(
 										if ( hard_discontinuity_cnter < i_MAX_INTERVAL)
 											col_sm_state <= hard_pre_disconnect;
 										else begin
-											RBF <= 1'b1; RB <= (col_cnter - i_MAX_INTERVAL + 1); 
+											RBF <= 1'b1; RB <= (col_cnter - i_MAX_INTERVAL ); 
 											//finish
 											col_sm_state <= col_WRITE_BACK_GEN_MASK;
 										end
@@ -475,23 +484,24 @@ module boundary_search(
 								default: 
 									begin
 										col_sm_state<=hard_pre_disconnect;
-										// Left rotate shift 512b data
-										row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]} ;
-										row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]} ;
-										col_cnter 	  <= (col_cnter + 1'b1) ;
+										
 									end
 							endcase
+							// Left rotate shift 512b data
+							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
+							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					col_WRITE_BACK_GEN_MASK: // this is where filtered data 512b being written back to BRAM
 						begin
-							//TODO: a wrapper to apply orig latch 512b data with mask and then write back to BRAM
+							// a wrapper to apply orig latch 512b data with mask and then write back to BRAM
 							//reg u_mask_gen_512bit_wrapper_i_trig;
 							//reg [8:0] u_mask_gen_512bit_wrapper_i_bound_index_left	;
 							//reg [8:0] u_mask_gen_512bit_wrapper_i_bound_index_right;
 							//wire u_mask_gen_512bit_wrapper_o_done;
 							//wire u_mask_gen_512bit_wrapper_o_mask;
 							u_mask_gen_512bit_wrapper_i_bound_index_left <= (LBF==1'b1)?LB:9'd0;
-							u_mask_gen_512bit_wrapper_i_bound_index_right <= (RBF==1'b1)? RB :9'd0;  //TODO: 511-RB can be converted to simpler version?
+							u_mask_gen_512bit_wrapper_i_bound_index_right <= (RBF==1'b1)? RB :9'd0;  // 511-RB can be converted to simpler version?
 							u_mask_gen_512bit_wrapper_i_trig <= 1'b1;
 							if (u_mask_gen_512bit_wrapper_o_done) begin
 								col_sm_state <= col_WRITE_BACK;
