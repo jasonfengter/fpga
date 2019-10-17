@@ -97,9 +97,11 @@ module boundary_search(
 	
 	
 	wire [5:0] o_block_int;
+	reg			r_is_bottom_or_top_search;
 	retrieve_block u_retrieve_block(
 		.i_1st_row_512bit	(row_1st_latch_int),
 		.i_2nd_row_512bit	(row_2nd_latch_int),
+		.i_bottom_or_top_search (r_is_bottom_or_top_search), // 0-bottom, 1-top
 		.o_block			(o_block_int)
     );
 	wire to_hard_connect_hit;
@@ -176,6 +178,9 @@ module boundary_search(
 				INIT_BOTTOM=1,
 				SEARCH_BOTTOM=2,
 				SEARCH_BOTTOM_LOAD=3,
+				INIT_TOP=4,
+				SEARCH_TOP=5,
+				SEARCH_TOP_LOAD=6,
 				DONE=15;
 				
 	
@@ -205,6 +210,8 @@ module boundary_search(
 				//i_trig_shift_int 		<= 1'b0;
 				i_row_num_init_int 		<= 9'd0;
 				i_row_num_to_read_int 	<= 9'd0;
+				
+				r_is_bottom_or_top_search <= 1'b0;  // Reset to bottom search
 			end
 		else
 			begin
@@ -214,19 +221,18 @@ module boundary_search(
 					// (1) in IDLE, module o_done signal should be reset but o_data should not be touched!!
 					// (2) in IDLE, IP under control should pull-down trig signal
 						begin
-							// Reset dual-row-shift module
+							// Reset dual-row-shift IP
 							i_init_en_int 			<= 1'b0;
 							i_trig_rd_int 			<= 1'b0;
 							//i_trig_shift_int 		<= 1'b0;
 							
 							col_search_trig 		<= 1'b0;  // IP trig pull-down
 							o_done_pre 				<= 1'b0;  // Module o_done down
+							r_is_bottom_or_top_search <= 1'b0;  // Reset to bottom search
 							
-							//reset 512b data
-							// row_1st_latch <= 512'd0;
-							// row_2nd_latch <= 512'd0;
 							if (i_trig==1'b1) begin
 								line_sm_state <= INIT_BOTTOM;
+								
 							end
 						end
 					INIT_BOTTOM:
@@ -236,6 +242,8 @@ module boundary_search(
 							i_trig_rd_int <= 1'b1;
 							i_row_num_init_int <= row_num_to_start;
 							i_row_num_to_read_int <= row_num_to_start + 1'b1;
+							
+							r_is_bottom_or_top_search <= 1'b0;  // Reset to bottom search
 							
 							//GUIDELINE: after IP o_done asserted, should deactivate IP i_trig
 							if (o_done_dual_row_module==1'b1) begin
@@ -254,7 +262,7 @@ module boundary_search(
 								col_search_trig <= 1'b0;
 								if (w_current_row_processed == 9'd23)  // Here limits the max row# this module will reach
 									begin
-										line_sm_state <= DONE;
+										line_sm_state <= INIT_TOP;
 									end
 								else
 									begin
@@ -275,6 +283,61 @@ module boundary_search(
 								// Setup dual-row-shift module
 								i_init_en_int 			<= 1'b0;
 								i_trig_rd_int 			<= 1'b0;
+								// Reset column search state-machine
+								col_search_trig 		<= 1'b0;  // IP trig pull-down
+								o_done_pre 				<= 1'b0;  // Module o_done down
+
+							end
+						end
+					INIT_TOP:
+						begin
+							// Setup dual-row-shift module
+							i_init_en_int <= 1'b1;
+							i_trig_rd_int <= 1'b1;
+							i_row_num_init_int <= row_num_to_start;
+							i_row_num_to_read_int <= row_num_to_start - 1'b1;
+							
+							r_is_bottom_or_top_search <= 1'b1;  // Set to top search
+							
+							//GUIDELINE: after IP o_done asserted, should deactivate IP i_trig
+							if (o_done_dual_row_module==1'b1) begin
+								line_sm_state <= SEARCH_TOP;
+								// Reset dual-row-shift module
+								i_init_en_int <= 1'b0;
+								i_trig_rd_int <= 1'b0;
+							end
+						end
+					SEARCH_TOP:
+						begin //GUIDELINE: after IP o_done asserted, should deactivate IP i_trig
+							col_search_trig <= 1'b1;
+							if (col_search_done==1'b1) begin
+								col_search_trig <= 1'b0;
+								if (w_current_row_processed == 9'd18)  // Here limits the min row# this module will reach
+									begin
+										line_sm_state <= DONE;
+									end
+								else
+									begin
+										// Setup dual-row-shift module to load next row 512b data
+										i_init_en_int <= 1'b0;
+										i_trig_rd_int <= 1'b1;
+										i_row_num_init_int <= 9'd0;
+										i_row_num_to_read_int <= i_row_num_to_read_int - 1'b1;
+										
+										line_sm_state <= SEARCH_TOP_LOAD;
+									end
+							end
+						end
+					SEARCH_TOP_LOAD:
+						begin //GUIDELINE: after IP o_done asserted, should deactivate IP i_trig
+							if (o_done_dual_row_module==1'b1) begin
+								line_sm_state <= SEARCH_TOP;
+								// Setup dual-row-shift module
+								i_init_en_int 			<= 1'b0;
+								i_trig_rd_int 			<= 1'b0;
+								// Reset column search state-machine
+								col_search_trig 		<= 1'b0;  // IP trig pull-down
+								o_done_pre 				<= 1'b0;  // Module o_done down
 
 							end
 						end
@@ -352,7 +415,7 @@ module boundary_search(
 								// TODO:
 								// (1) Need to filter 'o_1st_row_512b_int' while latching it, with previous 512b mask 'w_prev_512b_filter_data'!
 								// (2) If 'o_1st_row_512b_int' is the START ROW, then additional logic is required.
-								row_1st_latch <= (w_current_row_processed == (row_num_to_start+1'b1)) ? o_1st_row_512b_int : (o_1st_row_512b_int | w_prev_512b_filter_data) & w_prev_512b_filter_data;
+								row_1st_latch <= (w_current_row_processed == (row_num_to_start+1'b1) || w_current_row_processed == (row_num_to_start-1'b1)) ? o_1st_row_512b_int : (o_1st_row_512b_int | w_prev_512b_filter_data) & w_prev_512b_filter_data;
 								row_2nd_latch <= o_2nd_row_512b_int;
 								col_sm_state <= bound_detecting;
 							end
@@ -369,8 +432,8 @@ module boundary_search(
 									end
 							endcase
 							// Left rotate shift 512b data
-							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							row_1st_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_1st_latch[510:0], row_1st_latch[511]} : {row_1st_latch[0], row_1st_latch[511:1]};
+							row_2nd_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_2nd_latch[510:0], row_2nd_latch[511]} : {row_2nd_latch[0], row_2nd_latch[511:1]};
 							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					bound_start:
@@ -393,8 +456,8 @@ module boundary_search(
 									end
 							endcase
 							// Left rotate shift 512b data
-							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							row_1st_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_1st_latch[510:0], row_1st_latch[511]} : {row_1st_latch[0], row_1st_latch[511:1]};
+							row_2nd_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_2nd_latch[510:0], row_2nd_latch[511]} : {row_2nd_latch[0], row_2nd_latch[511:1]};
 							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					bound_connect:
@@ -415,8 +478,8 @@ module boundary_search(
 									end
 							endcase
 							// Left rotate shift 512b data
-							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							row_1st_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_1st_latch[510:0], row_1st_latch[511]} : {row_1st_latch[0], row_1st_latch[511:1]};
+							row_2nd_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_2nd_latch[510:0], row_2nd_latch[511]} : {row_2nd_latch[0], row_2nd_latch[511:1]};
 							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					bound_pre_disconnect:
@@ -447,8 +510,8 @@ module boundary_search(
 									end
 							endcase
 							// Left rotate shift 512b data
-							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							row_1st_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_1st_latch[510:0], row_1st_latch[511]} : {row_1st_latch[0], row_1st_latch[511:1]};
+							row_2nd_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_2nd_latch[510:0], row_2nd_latch[511]} : {row_2nd_latch[0], row_2nd_latch[511:1]};
 							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					hard_connect:
@@ -462,8 +525,8 @@ module boundary_search(
 								
 							end
 							// Left rotate shift 512b data
-							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							row_1st_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_1st_latch[510:0], row_1st_latch[511]} : {row_1st_latch[0], row_1st_latch[511:1]};
+							row_2nd_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_2nd_latch[510:0], row_2nd_latch[511]} : {row_2nd_latch[0], row_2nd_latch[511:1]};
 							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					hard_pre_disconnect:
@@ -488,8 +551,8 @@ module boundary_search(
 									end
 							endcase
 							// Left rotate shift 512b data
-							row_1st_latch <= {row_1st_latch[510:0], row_1st_latch[511]};
-							row_2nd_latch <= {row_2nd_latch[510:0], row_2nd_latch[511]};
+							row_1st_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_1st_latch[510:0], row_1st_latch[511]} : {row_1st_latch[0], row_1st_latch[511:1]};
+							row_2nd_latch <= (r_is_bottom_or_top_search==1'b0) ? {row_2nd_latch[510:0], row_2nd_latch[511]} : {row_2nd_latch[0], row_2nd_latch[511:1]};
 							col_cnter 	  <= (col_cnter + 1'b1) ;
 						end
 					col_WRITE_BACK_GEN_MASK: // this is where filtered data 512b being written back to BRAM
@@ -500,8 +563,10 @@ module boundary_search(
 							//reg [8:0] u_mask_gen_512bit_wrapper_i_bound_index_right;
 							//wire u_mask_gen_512bit_wrapper_o_done;
 							//wire u_mask_gen_512bit_wrapper_o_mask;
-							u_mask_gen_512bit_wrapper_i_bound_index_left <= (LBF==1'b1)?LB:9'd0;
-							u_mask_gen_512bit_wrapper_i_bound_index_right <= (RBF==1'b1)? RB :9'd0;  // 511-RB can be converted to simpler version?
+							
+							//TODO: For top part search, need to take care for LB/RB swap
+							u_mask_gen_512bit_wrapper_i_bound_index_left <= (LBF==1'b0)? 9'd0 : (r_is_bottom_or_top_search==1'b0) ? LB : (~RB);  // ~RB -> 511-RB
+							u_mask_gen_512bit_wrapper_i_bound_index_right <= (RBF==1'b0)? 9'd0 : (r_is_bottom_or_top_search==1'b0) ? RB : (~LB); // ~LB -> 511-LB
 							u_mask_gen_512bit_wrapper_i_trig <= 1'b1;
 							if (u_mask_gen_512bit_wrapper_o_done) begin
 								col_sm_state <= col_WRITE_BACK;
