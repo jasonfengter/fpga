@@ -3,7 +3,7 @@ module mask_gen_512bit_wrapper (
 	i_rstn,
 	i_trig,
 	i_bound_index_left,		//9bit
-	i_bound_index_right,	//9bit
+	i_bound_index_right,	//9bit, this number is 0-511, the index# from MSB to LSB of 512b data
 	o_done,
 	o_mask					//512bit
 );
