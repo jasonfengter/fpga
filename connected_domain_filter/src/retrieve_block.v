@@ -23,13 +23,15 @@
 module retrieve_block(
 	i_1st_row_512bit,
 	i_2nd_row_512bit,
+	i_bottom_or_top_search,	// 0 -bottom, 1-top
 	o_block
     );
 	
 	input [511:0] i_1st_row_512bit;
 	input [511:0] i_2nd_row_512bit;
+	input			i_bottom_or_top_search;
 	output [5:0] o_block;
 	
-	assign o_block = {i_1st_row_512bit[511:509],i_2nd_row_512bit[511:509]};
+	assign o_block = (i_bottom_or_top_search==1'b0) ? {i_1st_row_512bit[511:509],i_2nd_row_512bit[511:509]} : {i_1st_row_512bit[0], i_1st_row_512bit[1], i_1st_row_512bit[2],i_2nd_row_512bit[0], i_2nd_row_512bit[1], i_2nd_row_512bit[2]};
 	
 endmodule
