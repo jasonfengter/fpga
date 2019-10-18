@@ -1,5 +1,5 @@
 
-`define debug_mode
+//`define debug_mode
 
 module rd_512b_from_bram(
 	i_clk,
@@ -13,9 +13,9 @@ module rd_512b_from_bram(
 	i_rd_from_bram_data, //32bit
 	o_rd_from_bram_trig,
 	i_rd_from_bram_done
-	`ifdef debug_mode
-	,debug_port
-	`endif
+	// `ifdef debug_mode
+	// ,debug_port
+	// `endif
     );
 	
 	input 				i_clk;

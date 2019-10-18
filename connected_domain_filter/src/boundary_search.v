@@ -1,6 +1,3 @@
-
-
-
 module boundary_search(
 	
 	i_clk,
@@ -15,6 +12,7 @@ module boundary_search(
 	u_rd_512b_from_bram_i_rd_from_bram_done,
 	
 	row_num_to_start,	// 9bit
+	i_start_row_512b_data,
 	
 	// to TOP BRAM wr controller ctrl bus 
 	u_wr_512b_to_bram_o_wr_to_bram_addr,
@@ -38,6 +36,7 @@ module boundary_search(
 	input 				u_rd_512b_from_bram_i_rd_from_bram_done;
 	
 	input [8:0] row_num_to_start;
+	input [511:0] i_start_row_512b_data;
 	
 	output [12:0] 	u_wr_512b_to_bram_o_wr_to_bram_addr;
 	output [31:0] 	u_wr_512b_to_bram_o_wr_to_bram_data;
@@ -54,7 +53,8 @@ module boundary_search(
 	//reg 			i_trig_shift_int;
 	wire 			o_done_dual_row_module;
 	reg [8:0] 		i_row_num_to_read_int;
-	reg [8:0] 		i_row_num_init_int;
+	//reg [511:0]		r_i_start_row_512b_data;
+	//reg [8:0] 		i_row_num_init_int;
 	reg 			i_init_en_int;
 	
 	assign 		row_1st_latch_int=row_1st_latch;
@@ -68,7 +68,8 @@ module boundary_search(
 		//.i_trig_shift								(i_trig_shift_int),
 		.o_done										(o_done_dual_row_module),
 		.i_row_num_to_read							(i_row_num_to_read_int),	//9bit
-		.i_row_num_to_initial_setup					(i_row_num_init_int),		//9bit
+		.i_start_row_512b_data						(i_start_row_512b_data),	// This data must match row# of 'i_row_num_to_initial_setup'
+		//.i_row_num_to_initial_setup					(i_row_num_init_int),		//9bit
 		.i_init_en									(i_init_en_int),			
 		.o_1st_row_512b								(o_1st_row_512b_int),		//512bit
 		.o_2nd_row_512b								(o_2nd_row_512b_int),		//512bit
@@ -208,7 +209,7 @@ module boundary_search(
 				i_init_en_int 			<= 1'b0;
 				i_trig_rd_int 			<= 1'b0;
 				//i_trig_shift_int 		<= 1'b0;
-				i_row_num_init_int 		<= 9'd0;
+				//i_row_num_init_int 		<= 9'd0;
 				i_row_num_to_read_int 	<= 9'd0;
 				
 				r_is_bottom_or_top_search <= 1'b0;  // Reset to bottom search
@@ -240,7 +241,7 @@ module boundary_search(
 							// Setup dual-row-shift module
 							i_init_en_int <= 1'b1;
 							i_trig_rd_int <= 1'b1;
-							i_row_num_init_int <= row_num_to_start;
+							//i_row_num_init_int <= row_num_to_start;
 							i_row_num_to_read_int <= row_num_to_start + 1'b1;
 							
 							r_is_bottom_or_top_search <= 1'b0;  // Reset to bottom search
@@ -269,7 +270,7 @@ module boundary_search(
 										// Setup dual-row-shift module to load next row 512b data
 										i_init_en_int <= 1'b0;
 										i_trig_rd_int <= 1'b1;
-										i_row_num_init_int <= 9'd0;
+										//i_row_num_init_int <= 9'd0;
 										i_row_num_to_read_int <= i_row_num_to_read_int + 1'b1;
 										
 										line_sm_state <= SEARCH_BOTTOM_LOAD;
@@ -294,7 +295,7 @@ module boundary_search(
 							// Setup dual-row-shift module
 							i_init_en_int <= 1'b1;
 							i_trig_rd_int <= 1'b1;
-							i_row_num_init_int <= row_num_to_start;
+							//i_row_num_init_int <= row_num_to_start;
 							i_row_num_to_read_int <= row_num_to_start - 1'b1;
 							
 							r_is_bottom_or_top_search <= 1'b1;  // Set to top search
@@ -321,7 +322,7 @@ module boundary_search(
 										// Setup dual-row-shift module to load next row 512b data
 										i_init_en_int <= 1'b0;
 										i_trig_rd_int <= 1'b1;
-										i_row_num_init_int <= 9'd0;
+										//i_row_num_init_int <= 9'd0;
 										i_row_num_to_read_int <= i_row_num_to_read_int - 1'b1;
 										
 										line_sm_state <= SEARCH_TOP_LOAD;
@@ -588,7 +589,7 @@ module boundary_search(
 							//Setup wr_512b IP
 							u_wr_512b_to_bram_i_trig <= 1'b1;
 							u_wr_512b_to_bram_i_wr_row_num <= i_row_num_to_read_int;
-							u_wr_512b_to_bram_i_wr_data_512b <= (o_2nd_row_512b_int | u_mask_gen_512bit_wrapper_o_mask) & u_mask_gen_512bit_wrapper_o_mask;
+							u_wr_512b_to_bram_i_wr_data_512b <= u_mask_gen_512bit_wrapper_o_mask; //(o_2nd_row_512b_int | u_mask_gen_512bit_wrapper_o_mask) & u_mask_gen_512bit_wrapper_o_mask;
 							if (u_wr_512b_to_bram_o_done==1'b1)
 								begin
 									col_sm_state<=col_DONE;

@@ -23,22 +23,28 @@ module start_line_search (
 	o_512b_mask				//512b
 );
 
-	input 			i_clk,
-	input 			i_rstn,
-	input 			i_trig,
-	output 			o_done,
+	input 			i_clk;
+	input 			i_rstn;
+	input 			i_trig;
+	output 			o_done;
 	
 	// Input start row #
-	input [8:0] 	i_start_row_num,		// 9b
+	input [8:0] 	i_start_row_num;		// 9b
 	
 	// BRAM rd data/ctrl bus
-	output [12:0] 	o_rd_from_bram_addr,	// 13b
-	input [31:0] 	i_rd_from_bram_data,	// 32b
-	output 			o_rd_from_bram_trig,
-	input 			i_rd_from_bram_done,
+	output [12:0] 	o_rd_from_bram_addr;	// 13b
+	input [31:0] 	i_rd_from_bram_data;	// 32b
+	output 			o_rd_from_bram_trig;
+	input 			i_rd_from_bram_done;
 
+	// BRAM wr data/ctrl bus
+	output	[12:0]	o_wr_to_bram_addr;		// 13b
+	output	[31:0]	o_wr_to_bram_data;		// 32b
+	output			o_wr_to_bram_trig;
+	input			i_wr_to_bram_done;
+	
 	// Output 512b mask data
-	output reg [511:0] 	o_512b_mask				//512b
+	output reg [511:0] 	o_512b_mask	;			//512b
 	
 	
 	reg r_i_trig_u_512b_rd;
@@ -61,9 +67,9 @@ module start_line_search (
     );
 	
 	// 512b mask gen IP
-	reg 			r_i_trig_u_512b_mask_gen
+	reg 			r_i_trig_u_512b_mask_gen;
 	reg [8:0] 		r_i_bound_index_left_u_512b_mask_gen;
-	reg [8:0] 		r_i_bound_index_right_u_512b_mask_gen
+	reg [8:0] 		r_i_bound_index_right_u_512b_mask_gen;
 	wire 			w_o_done_u_512b_mask_gen;
 	wire [511:0]	w_o_mask_u_512b_mask_gen;
 	mask_gen_512bit_wrapper u_512b_mask_gen(
@@ -188,7 +194,7 @@ module start_line_search (
 						begin
 							// If 10b_window[4:0] = 5'd0 for 1st time, then LBF=1, LB=col_cnter
 							if (LBF==1'b0) begin
-								if (w_10b_slide_window[4:0]=5'd0) begin
+								if (w_10b_slide_window[4:0]==5'd0) begin
 									LBF<=1'b1; LB<=col_cnter;
 									sm_state<=SEARCH_RIGHT_BOUND;
 								end
@@ -201,7 +207,7 @@ module start_line_search (
 						begin
 							// If 10b_window[9:5] = 5'd0 and [4:0] has logic '1' count >=3 for 1st time, then RBF=1, RB=col_cnter
 							if (RBF==1'b0) begin
-								if (w_10b_slide_window[9:5]=5'd0 && (w_o_num_of_one==3'd3 || w_o_num_of_one==3'd4 || w_o_num_of_one==3'd5)) begin
+								if (w_10b_slide_window[9:5]==5'd0 && (w_o_num_of_one==3'd3 || w_o_num_of_one==3'd4 || w_o_num_of_one==3'd5)) begin
 									RBF<=1'b1; RB<=col_cnter;
 									sm_state<=MASK_GEN;
 								end
@@ -246,8 +252,10 @@ module start_line_search (
 							r_i_wr_data_512b_u_512b_wr<=w_o_mask_u_512b_mask_gen;  // Mask is in fact the best filtered data
 							r_i_trig_u_512b_wr<=1'b1;
 							
+							// Latch for 512b output
+							o_512b_mask<=w_o_mask_u_512b_mask_gen;
 							// Wait till IP o_done
-							if(w_o_done_u_512b_mask_gen==1'b1) begin
+							if(w_o_done_u_512b_wr==1'b1) begin
 								// Pull-down 512b wr IP trig
 								r_i_trig_u_512b_wr<=1'b0;
 								sm_state<=DONE;
@@ -262,7 +270,7 @@ module start_line_search (
 							end
 						end
 					default:
-					
+						sm_state<=IDLE;
 				endcase
 			end
 	end
@@ -277,14 +285,14 @@ module return_num_of_one (
 	input [4:0] i_5b_data;
 	output [2:0] o_num_of_one;
 	
-	always@(*) begin
-		case (i_5b_data)
-			5'b11111: o_num_of_one=5;
-			5'b01111,5'b10111,5'b11011,5'b11101,5'b11110: o_num_of_one=4;
-			5'b10011,5'b11001,5'b11100,5'b10101,5'b10110,5'b11010: o_num_of_one=3;
-			default: o_num_of_one=0; // 0 here is no-meaningful, just a return for not being qualified.
-		
-		endcase
-	end
+	wire hit_5b11111;
+	wire hit_5b01111_5b10111_5b11011_5b11101_5b11110;
+	wire hit_5b10011_5b11001_5b11100_5b10101_5b10110_5b11010;
+	
+	assign hit_5b11111 = (i_5b_data==5'b11111);
+	assign hit_5b01111_5b10111_5b11011_5b11101_5b11110 = (i_5b_data==5'b01111) | (i_5b_data==5'b10111) | (i_5b_data==5'b11011) | (i_5b_data==5'b11101) | (i_5b_data==5'b11110);
+	assign hit_5b10011_5b11001_5b11100_5b10101_5b10110_5b11010 = (i_5b_data==5'b10011) | (i_5b_data==5'b11001) | (i_5b_data==5'b11100) | (i_5b_data==5'b10101) | (i_5b_data==5'b10110) | (i_5b_data==5'b11010);
+	
+	assign o_num_of_one = (hit_5b11111) ? 5 : (hit_5b01111_5b10111_5b11011_5b11101_5b11110)? 4 : (hit_5b10011_5b11001_5b11100_5b10101_5b10110_5b11010) ? 3 : 0;
 
 endmodule

@@ -8,7 +8,8 @@ module dual_row_shift(
 
 	o_done,
 	i_row_num_to_read,	//9bit
-	i_row_num_to_initial_setup,		//9bit
+	i_start_row_512b_data,	//512b
+	//i_row_num_to_initial_setup,		//9bit
 	i_init_en,			//when enabled, load 1st row reg with i_row_num_to_initial_setup, 2nd row with i_row_num_to_read, 
 						//otherwise, load 2nd row with i_row_num_to_read
 	o_1st_row_512b,		//512bit
@@ -29,7 +30,8 @@ module dual_row_shift(
 
 	output  			o_done;
 	input [8:0] 		i_row_num_to_read;	//9bit
-	input [8:0] 		i_row_num_to_initial_setup;		//9bit
+	input [511:0]		i_start_row_512b_data;
+	//input [8:0] 		i_row_num_to_initial_setup;		//9bit
 	input 				i_init_en;			//when enabled; load 1st row reg with i_row_num_to_initial_setup; 2nd row with i_row_num_to_read; 
 											//otherwise; load 2nd row with i_row_num_to_read
 	output reg [511:0] 	o_1st_row_512b;		//512bit
@@ -121,17 +123,18 @@ module dual_row_shift(
 							//reset module done
 							o_done_pre <=1'b0; 
 							//setup rd_512b_bram module
-							u_rd_512b_from_bram_i_rd_row_num <= i_row_num_to_initial_setup;
+							//u_rd_512b_from_bram_i_rd_row_num <= i_row_num_to_initial_setup;
 							//trigger rd_512b_bram_module
-							i_trig_rd_int <= 1'b1;
-							
-							if (u_rd_512b_from_bram_o_done == 1'b1)
-								begin
-									i_trig_rd_int <= 1'b0;
-									o_1st_row_512b <= u_rd_512b_from_bram_o_rd_data_512b;
-									sm_state <= RD_INIT2;
+							//i_trig_rd_int <= 1'b1;
+							o_1st_row_512b <= i_start_row_512b_data;	// load 1st row with initial 512b data
+							sm_state <= RD_INIT2;
+							// if (u_rd_512b_from_bram_o_done == 1'b1)
+								// begin
+									// i_trig_rd_int <= 1'b0;
+									// o_1st_row_512b <= u_rd_512b_from_bram_o_rd_data_512b;
+									// sm_state <= RD_INIT2;
 									
-								end
+								// end
 						end
 					RD_INIT2:
 						//GUIDELINE: after DONE asserted, should deactivate 'trig' of IP under control
